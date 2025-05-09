@@ -10,6 +10,100 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth:
+    build:
+      context: ./TalkLens.Auth
+      dockerfile: Dockerfile
+    container_name: talklens-auth
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=${POSTGRES_HOST};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET_KEY}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpirationInMinutes=${JWT_EXPIRATION_MINUTES}
+      - ASPNETCORE_URLS=http://+:80
+    expose:
+      - "80"
+    ports:
+      - "${AUTH_PORT}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  collector:
+    build:
+      context: ./TalkLens.Collector
+      dockerfile: TalkLens.Collector.Api/Dockerfile
+    container_name: talklens-collector
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+      - Jwt__Issuer=${JWT_ISSUER}
+      - Jwt__Audience=${JWT_AUDIENCE}
+      - Jwt__SecretKey=${JWT_SECRET_KEY}
+      - Storage__Minio__Endpoint=minio:9000
+      - Storage__Minio__AccessKey=${MINIO_ROOT_USER}
+      - Storage__Minio__SecretKey=${MINIO_ROOT_PASSWORD}
+      - Redis__ConnectionString=redis:6379
+      - Kafka__BootstrapServers=kafka:29092
+    expose:
+      - "80"
+    ports:
+      - "${COLLECTOR_PORT}:80"
+    depends_on:
+      - postgres
+      - minio
+      - redis
+      - kafka
+      - auth
+    volumes:
+      - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+      - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  frontend:
+    build:
+      context: ./TalkLens.Frontend
+      dockerfile: Dockerfile
+    container_name: talklens-frontend
+    environment:
+      - NODE_ENV=production
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    volumes:
+      - ./TalkLens.Frontend:/app
+      - /app/node_modules
+    depends_on:
+      - auth
+      - collector
+
+  analyzer:
+    build:
+      context: ./talklens.analyzer
+      dockerfile: Dockerfile
+    container_name: talklens-analyzer
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - KAFKA_TOPIC=messages
+    depends_on:
+      - postgres
+      - kafka
+      - collector
 
   clickhouse:
     image: clickhouse/clickhouse-server:latest
