@@ -1,0 +1,12 @@
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.test.local
+.env.test.local
+
+TalkLens.Auth/
+TalkLens.Collector/
+TalkLens.Frontend/
+TalkLens.Analyzer/
