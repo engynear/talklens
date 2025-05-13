@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "6543:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -18,7 +18,7 @@ services:
 
   auth:
     build:
-      context: ./TalkLens.Auth
+      context: ./talklens.auth
       dockerfile: Dockerfile
     container_name: talklens-auth
     environment:
@@ -42,7 +42,7 @@ services:
 
   collector:
     build:
-      context: ./TalkLens.Collector
+      context: ./talklens.collector
       dockerfile: TalkLens.Collector.Api/Dockerfile
     container_name: talklens-collector
     environment:
@@ -73,16 +73,13 @@ services:
 
   frontend:
     build:
-      context: ./TalkLens.Frontend
+      context: ./talklens.frontend
       dockerfile: Dockerfile
     container_name: talklens-frontend
     environment:
       - NODE_ENV=production
     ports:
       - "${FRONTEND_PORT}:5173"
-    volumes:
-      - ./TalkLens.Frontend:/app
-      - /app/node_modules
     depends_on:
       - auth
       - collector
@@ -93,13 +90,17 @@ services:
       dockerfile: Dockerfile
     container_name: talklens-analyzer
     environment:
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - KAFKA_TOPIC=messages
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - USE_API=${USE_API}
+      - YANDEX_API=${YANDEX_API}
+      - FOLDER_ID=${FOLDER_ID}
+      - API_KEY=${API_KEY}
     depends_on:
       - postgres
       - kafka
@@ -108,9 +109,6 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: talklens-clickhouse
-    ports:
-      - "8123:8123"
-      - "9002:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     environment:
@@ -126,9 +124,9 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    #ports:
+     # - "9000:9000"
+      #- "9001:9001"
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -136,8 +134,8 @@ services:
   redis:
     image: redis:latest
     container_name: talklens-redis
-    ports:
-      - "6379:6379"
+    #ports:
+    #  - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -146,16 +144,19 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
+    #ports:
+    #  - "2181:2181"
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "29092:29092" 
+      - "5002:9092"
+    #  - "29092:29092"
+    expose:
+      - "9092"
+      - "29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -168,8 +169,8 @@ services:
     image: provectuslabs/kafka-ui:latest
     depends_on:
       - kafka
-    ports:
-      - "8080:8080"
+    #ports:
+    #  - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: talklens-cluster
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
