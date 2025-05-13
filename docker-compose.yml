@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "6543:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -51,6 +51,8 @@ services:
       - Storage__Minio__SecretKey=${MINIO_ROOT_PASSWORD}
       - Redis__ConnectionString=redis:6379
       - Kafka__BootstrapServers=kafka:29092
+    volumes:
+      - collector_sessions:/tmp/TelegramSessionCache
     expose:
       - "80"
     ports:
@@ -111,8 +113,8 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    #ports:
-     # - "9000:9000"
+    ports:
+      - "9000:9000"
       #- "9001:9001"
     command: server /data --console-address ":9001"
     volumes:
@@ -120,8 +122,8 @@ services:
 
   redis:
     image: redis:latest
-    #ports:
-    #  - "6379:6379"
+    ports:
+     - "6379:6379"
     volumes:
       - redis_data:/data
 
@@ -139,7 +141,7 @@ services:
       - zookeeper
     ports:
       - "5002:9092"
-    #  - "29092:29092"
+      - "29092:29092"
     expose:
       - "9092"
       - "29092"
@@ -167,3 +169,4 @@ volumes:
   clickhouse_data:
   minio_data:
   redis_data:
+  collector_sessions:
