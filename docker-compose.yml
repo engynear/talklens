@@ -109,6 +109,8 @@ services:
   clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: talklens-clickhouse
+    ports:
+      - "9002:${CLICKHOUSE_PORT}"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
     environment:

@@ -8,10 +8,11 @@ TalkLens - это система для анализа и сбора метри�
 - Git
 - Yandex GPT API ключ
 - Yandex Cloud Folder ID
+- Goose (для миграций)
 
-## Установка
+## Установка на Linux
 
-1. Клонируйте все необходимые репозитории:
+1. Клонируйте все необходимые репозитории в корень проекта:
 
 ```bash
 git clone https://github.com/engynear/talklens.analyzer.git
@@ -38,6 +39,15 @@ FOLDER_ID=ваш_folder_id
 
 ```bash
 docker compose up -d
+```
+
+2. Дождитесь полного запуска контейнеров с базами данных (PostgreSQL и ClickHouse)
+
+3. Выполните миграции (примеры команд):
+
+```bash
+goose -dir ./migrations/clickhouse/ clickhouse "clickhouse://clickhouse:clickhouse@localhost:9002/talklens" up
+goose -dir ./migrations/postgres/ postgres "postgres://postgres:postgres@localhost:6543/talklens?sslmode=disable" up
 ```
 
 ## Структура проекта
