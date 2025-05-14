@@ -90,6 +90,8 @@ services:
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - FOLDER_ID=${FOLDER_ID}
       - API_KEY=${API_KEY}
+      - LLM_TYPE=yandex
+      - LOCAL_MODEL_NAME=models/mistral-instruct
     depends_on:
       - postgres
       - kafka
